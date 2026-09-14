@@ -1,0 +1,9 @@
+{
+  "name": "vi-en-lora-v1",
+  "strategy": "language_lora",
+  "decoder_last_n_layers": 6,
+  "vision_last_n_layers": 0,
+  "train_projector": false,
+  "lora_rank": 16,
+  "learning_rate": 0.0001
+}

@@ -1,0 +1,5 @@
+{
+  "name": "vi-en-full-sft-v1",
+  "strategy": "full_sft",
+  "learning_rate": 0.00001
+}
