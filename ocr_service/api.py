@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
@@ -12,12 +13,32 @@ from .ui import INDEX_HTML
 
 settings = Settings.from_env()
 if settings.recognition_backend == "local":
-    recognition = LocalPaddleOCRVLRecognition(settings.model_id, settings.device)
+    recognition = LocalPaddleOCRVLRecognition(
+        settings.model_id,
+        settings.device,
+        settings.local_max_new_tokens,
+        settings.local_torch_dtype,
+    )
 else:
     recognition = VLLMRecognition(settings)
 
 service = OCRService(settings, WholePageLayout(), recognition)
-app = FastAPI(title="HPD Vietnamese-English OCR", version="2.0.0")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    start = getattr(recognition, "start", None)
+    if start is not None:
+        await start()
+    try:
+        yield
+    finally:
+        close = getattr(recognition, "close", None)
+        if close is not None:
+            await close()
+
+
+app = FastAPI(title="HPD Vietnamese-English OCR", version="2.0.0", lifespan=lifespan)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -64,6 +85,8 @@ async def ocr(request: OCRRequest) -> OCRDocument:
         return await service.process(request.content_base64, request.filename, request.mode)
     except (NotImplementedError, ValueError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 def main() -> None:

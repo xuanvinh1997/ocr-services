@@ -1,9 +1,11 @@
 # Vietnamese-English OCR service V2
 
 Production-oriented document OCR orchestration using `PaddlePaddle/PaddleOCR-VL-1.6`
-served by a local vLLM-compatible endpoint. PDF pages with usable native text bypass
-OCR; remaining pages are segmented by a layout backend, recognized crop-by-crop, and
-returned with Markdown and provenance.
+served by a local vLLM-compatible endpoint. In `hybrid` mode, PDF pages with usable
+native text bypass OCR; remaining pages are rendered one at a time, segmented by a
+layout backend, recognized crop-by-crop, and returned with Markdown and provenance.
+The built-in whole-page layout backend is a safe fallback; configure a real layout
+adapter before relying on region-level document semantics in production.
 
 ## Quick start
 
@@ -17,6 +19,15 @@ ocr-api
 For a real worker, install the Paddle extras in its own compatible Python/CUDA
 environment and configure `VLLM_BASE_URL`. The API process deliberately does not
 install, download, or upgrade models at runtime.
+
+## Production limits
+
+`MAX_DOCUMENT_BYTES`, `MAX_DOCUMENT_PAGES`, `MAX_PAGE_PIXELS`, and
+`MAX_TOTAL_RENDERED_PIXELS` protect the service from oversized uploads and expensive
+PDF rendering. vLLM output, connection-pool size, and retry behavior are configured
+through the `VLLM_*` variables in `.env.example`. Local inference is serialized per
+process to protect GPU memory; scale it with separate worker processes only after
+sizing GPU memory for one model copy per process.
 
 ## Endpoints & UI
 
